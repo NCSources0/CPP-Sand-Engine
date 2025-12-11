@@ -1,0 +1,6 @@
+{
+  "code-runner.executorMap": {
+    "c": "cd $dir && gcc $fileName -o $fileNameWithoutExt -I ./include -L ./lib -lSDL3 -lSDL3_ttf && ./$fileNameWithoutExt",
+    "cpp": "cd $dir && g++ $fileName -o $fileNameWithoutExt -I ./include -L ./lib -lSDL3 -lSDL3_ttf && ./$fileNameWithoutExt"
+  }
+}
