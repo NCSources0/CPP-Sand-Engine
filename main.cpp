@@ -5,6 +5,7 @@
 
 // Window config
 #define TITLE   "C++ Sand Sim" // Window title
+#define VERSION (string)"A1"   // Window version
 #define WIDTH   1280           // Window width
 #define HEIGHT  720            // Window height
 #define PX_SIZE 4              // Pixel size
@@ -88,8 +89,9 @@ SDL_Time lastTick = 1;                       // Last tick time (ns)
 float deltaTime = 1;                         // Delta time (ms)
 float fps;                                   // Frames per second
 string matKeys[11] = {"`", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}; // Material selection keys
-int matKeysLength = lengthOf(matKeys);    // Number of material selection keys
-float brushSize = 16;                      // Brush size
+int matKeysLength = lengthOf(matKeys);       // Number of material selection keys
+float brushSize = 16;                        // Brush size
+string title = TITLE;                        // Title string
 
 string text = ""; // Text to display
 int lines = 0;    // Number of text lines
@@ -290,7 +292,7 @@ void render() {
   SDL_RenderLines(renderer, points, VERTEXES);
 
   clearText();
-  addTextLine("C++ Sand Sim\n");
+  addTextLine(title + " " + VERSION + "\n");
   addTextLine("Material: " + materials[material].name);
   addTextLine("FPS: " + to_string((int)fps));
 
