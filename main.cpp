@@ -5,7 +5,7 @@
 
 // Window config
 #define TITLE   "C++ Sand Sim" // Window title
-#define VERSION (string)"A1"   // Window version
+#define VERSION (string)"A2"   // Window version
 #define WIDTH   1280           // Window width
 #define HEIGHT  720            // Window height
 #define PX_SIZE 4              // Pixel size
@@ -25,7 +25,7 @@
 #define TXT_RESERVE 256                                  // Text buffer reserve size
 
 // Textbox config
-#define BOX_C SDL_Color{0, 0, 0, 127} // Textbox color
+#define BOX_C SDL_Color{0, 0, 0, 127} // Textbox colors
 #define BOX_W 128                     // Textbox width
 #define BOX_X 8                       // Textbox X position
 #define BOX_Y 8                       // Textbox Y position
@@ -92,6 +92,9 @@ string matKeys[11] = {"`", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}; //
 int matKeysLength = lengthOf(matKeys);       // Number of material selection keys
 float brushSize = 16;                        // Brush size
 string title = TITLE;                        // Title string
+float brushStrength = 1;                     // Brush strength
+bool lastDown = false;                       // Last mouse down
+coords lastm = {0, 0};                       // Last mouse position
 
 string text = ""; // Text to display
 int lines = 0;    // Number of text lines
@@ -195,7 +198,7 @@ int getID(float x, float y) {
 }
 
 float points2pixels(float points) {
-  return points * (4.0f * SDL_GetWindowDisplayScale(window) / 3.0f);
+  return SDL_GetWindowDisplayScale(window) * 4.0f / 3.0f * points;
 }
 
 bool isLiquid(int i) {
@@ -248,11 +251,15 @@ void render() {
     }
   }
 
-  brushSize += scroll.y;
+  brushSize -= scroll.y;
   brushSize = SDL_clamp(brushSize, 1.0f, 64.0f);
 
+  if (key("Q")) brushStrength -= 0.01f;
+  if (key("E")) brushStrength += 0.01f;
+  brushStrength = SDL_clamp(brushStrength, 0.01f, 1);
+
   coords m = { mouse.x / PX_SIZE, mouse.y / PX_SIZE };
-  if (leftMouse && inBounds(m.x, m.y)) {
+  if (leftMouse && inBounds(m.x, m.y) && (m.x != lastm.x || m.y != lastm.y || leftMouse != lastDown)) {
     int half = brushSize / 2;
     int end = half - SDL_fmodf(brushSize, 1);
     for (int x = -half; x <= end; x++) {
@@ -264,10 +271,9 @@ void render() {
         float dist = SDL_sqrtf((float)(x * x + y * y));
         if (dist > brushSize / 2) continue;
 
-        bufferGrid[dx][dy] = material;
+        if (SDL_randf() < brushStrength) bufferGrid[dx][dy] = material;
       }
     }
-    bufferGrid[m.x][m.y] = material;
   }
 
   commitBuffer();
@@ -278,31 +284,44 @@ void render() {
     }
   }
 
-  SDL_FPoint points[VERTEXES] = {NULL};
-  float xp = m.x;
-  float yp = m.y;
-  for (int i = 0; i < VERTEXES; i++) {
-    float angle = (float)i / (VERTEXES - 1.0f) * 2.0f * 3.14159265f;
+  SDL_FPoint points[VERTEXES + 1] = {0};
+  float xp = m.x + 0.5;
+  float yp = m.y + 0.5;
+  for (int i = 0; i <= VERTEXES; i++) {
+    float angle = (float)i / VERTEXES * SDL_PI_F * 2.0f;
     float bx = xp + SDL_cosf(angle) * (brushSize / 2.0f);
     float by = yp + SDL_sinf(angle) * (brushSize / 2.0f);
     points[i] = SDL_FPoint{ bx * PX_SIZE, by * PX_SIZE };
   }
 
   SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-  SDL_RenderLines(renderer, points, VERTEXES);
+  SDL_RenderLines(renderer, points, VERTEXES + 1);
 
+  SDL_SetRenderDrawColor(renderer, BOX_C.r, BOX_C.g, BOX_C.b, BOX_C.a);
   clearText();
   addTextLine(title + " " + VERSION + "\n");
-  addTextLine("Material: " + materials[material].name);
-  addTextLine("FPS: " + to_string((int)fps));
+  addTextLine("Brush size: Scroll");
+  addTextLine("Strength: Q/E");
 
-  Box2D textBox = { BOX_X, BOX_Y, BOX_W + PAD_X * 2, points2pixels(lines * FONT_SIZE) + PAD_Y * 2 };
-
-  SDL_FRect box = { textBox.x, textBox.y, textBox.w, textBox.h };
-  SDL_SetRenderDrawColor(renderer, BOX_C.r, BOX_C.g, BOX_C.b, BOX_C.a);
+  Box2D directionsBox = { BOX_X, BOX_Y, BOX_W + PAD_X * 2, points2pixels(lines * FONT_SIZE) + PAD_Y * 2 };
+  SDL_FRect box = { directionsBox.x, directionsBox.y, directionsBox.w, directionsBox.h };
   SDL_RenderFillRect(renderer, &box);
 
-  renderText(textBox.x + PAD_X, textBox.y + PAD_Y);
+  renderText(directionsBox.x + PAD_X, directionsBox.y + PAD_Y);
+
+  clearText();
+  addTextLine("Material: " + materials[material].name);
+  addTextLine("FPS: " + to_string((int)fps));
+  addTextLine("Strength: " + to_string((int)(brushStrength * 100)) + "%");
+
+  Box2D infoBox = { WIDTH - BOX_W - PAD_X * 4, BOX_Y, BOX_W + PAD_X * 2, points2pixels(lines * FONT_SIZE) + PAD_Y * 2 };
+  box = { infoBox.x, infoBox.y, infoBox.w, infoBox.h };
+  SDL_RenderFillRect(renderer, &box);
+
+  renderText(infoBox.x + PAD_X, infoBox.y + PAD_Y);
+
+  lastm = m;
+  lastDown = leftMouse;
 }
 
 int main(int argc, char* argv[]) {
